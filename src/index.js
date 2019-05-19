@@ -17,11 +17,11 @@ class Square extends React.Component {
 }
 
 class Board extends React.Component {
-  renderSquare(i) {
+  renderSquare(square_num) {
     return (
       <Square
-        value={this.props.squares[i]}
-        onClick={()=> {this.props.onClick(i)}}
+        value={this.props.squares[square_num]}
+        onClick={()=> {this.props.onClick(this.props.board_num,square_num)}}
       />
     );
   }
@@ -56,24 +56,27 @@ class Game extends React.Component {
       history: Array(9).fill({
         squares: Array(9).fill(null),
       }) ,
+      board_restriction: null,
       xIsNext:true,
       stepNumber: 0,
     }
   }
 
-  handleClick(i){
+  handleClick(board, square){
+    if(this.state.board_restriction && this.state.board_restriction !== board) {return}
     const history = this.state.history.slice(0, this.state.stepNumber + 1);
     const current = history[this.state.stepNumber];
     const squares = current.squares.slice();
 
-    if (calculateWinner(squares) || squares[i]) {
+    if (calculateWinner(squares) || squares[square]) {
       return;
     }
-    squares[i] = this.state.xIsNext ? 'X' : 'O';
+    squares[square] = this.state.xIsNext ? 'X' : 'O';
     this.setState({
       history: history.concat([{
          squares: squares,
       }]),
+      board_restriction: square,
       stepNumber: history.length,
       xIsNext: !this.state.xIsNext,
     })
@@ -86,12 +89,13 @@ class Game extends React.Component {
     });
   }
 
-  renderBoard(state,i) {
+  renderBoard(state, board_num) {
     return (
       <div className="game-board">
         <Board
+          board_num = {board_num}
           squares={state.squares}
-          onClick={(i) => this.handleClick(i)}
+          onClick={(board, square) => this.handleClick(board, square)}
         />
       </div>
     );
@@ -101,7 +105,6 @@ class Game extends React.Component {
     const history = this.state.history;
     const current = history[this.state.stepNumber];
     const winner = calculateWinner(current.squares);
-
     const moves = history.map((step, move)=> {
       const desc = move ?
         'Go to move #' + move :
