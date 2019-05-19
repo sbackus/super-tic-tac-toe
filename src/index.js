@@ -90,11 +90,13 @@ class Game extends React.Component {
   }
 
   renderBoard(state, board_num) {
+    const board = state.history[state.stepNumber][board_num];
+    const highlighted = state.board_restriction === board_num
     return (
-      <div className="game-board">
+      <div className={highlighted ? "highlighted-game-board" : "game-board"}>
         <Board
           board_num = {board_num}
-          squares={state[board_num].squares}
+          squares={board.squares}
           onClick={(board, square) => this.handleClick(board, square)}
         />
       </div>
@@ -128,19 +130,19 @@ class Game extends React.Component {
       <div className="game">
         <div>
           <div className="game-row">
-            {this.renderBoard(current, 0)}
-            {this.renderBoard(current, 1)}
-            {this.renderBoard(current, 2)}
+            {this.renderBoard(this.state, 0)}
+            {this.renderBoard(this.state, 1)}
+            {this.renderBoard(this.state, 2)}
           </div>
           <div className="game-row">
-            {this.renderBoard(current, 3)}
-            {this.renderBoard(current, 4)}
-            {this.renderBoard(current, 5)}
+            {this.renderBoard(this.state, 3)}
+            {this.renderBoard(this.state, 4)}
+            {this.renderBoard(this.state, 5)}
           </div>
           <div className="game-row">
-            {this.renderBoard(current, 6)}
-            {this.renderBoard(current, 7)}
-            {this.renderBoard(current, 8)}
+            {this.renderBoard(this.state, 6)}
+            {this.renderBoard(this.state, 7)}
+            {this.renderBoard(this.state, 8)}
           </div>
         </div>
 

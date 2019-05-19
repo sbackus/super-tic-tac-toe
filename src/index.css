@@ -49,6 +49,11 @@ ol, ul {
   flex-direction: row;
 }
 
+.highlighted-game-board{
+  margin: 6px;
+  border: 4px solid #999;
+}
+
 .game {
   display: flex;
   flex-direction: row;
