@@ -69,13 +69,14 @@ class Game extends React.Component {
     const current_board = current[board]
     const squares = current_board.squares.slice();
 
-    if (calculateWinner(squares) || squares[square]) {
+    if (calculateGameWinner(current) || squares[square]) {
       return;
     }
     squares[square] = this.state.xIsNext ? 'X' : 'O';
-    current[board] = { squares: squares }
+    const next_state = current.map((other_board,index)=>index===board ? { squares: squares } : other_board)
+    // current[board] = { squares: squares }
     this.setState({
-      history: history.concat([ current]),
+      history: history.concat([ next_state ]),
       board_restriction: square,
       stepNumber: history.length,
       xIsNext: !this.state.xIsNext,
@@ -84,6 +85,7 @@ class Game extends React.Component {
 
   jumpTo(step){
     this.setState({
+      board_restriction: null,
       stepNumber: step,
       xIsNext: (step % 2) === 0,
     });
@@ -106,7 +108,7 @@ class Game extends React.Component {
   render() {
     const history = this.state.history;
     const current = history[this.state.stepNumber];
-    const winner = current.reduce((winner, board)=>{winner|| calculateWinner(board.squares)})
+    const winner = calculateGameWinner(current)
 
     const moves = history.map((step, move)=> {
       const desc = move ?
@@ -162,7 +164,15 @@ ReactDOM.render(
   document.getElementById('root')
 );
 
-function calculateWinner(squares) {
+function calculateGameWinner(boards){
+  var winner = null
+  boards.forEach(function(board) {
+    winner = winner || calculateBoardWinner(board.squares)
+  });
+  return winner
+}
+
+function calculateBoardWinner(squares) {
   const lines = [
     [0, 1, 2],
     [3, 4, 5],
