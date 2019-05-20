@@ -53,31 +53,55 @@ class Game extends React.Component {
   constructor(props){
     super(props)
     this.state = {
-      history: [Array(9).fill({
-        squares: Array(9).fill(null),
-      })],
-      board_restriction: null,
+      history: [{
+        board_restriction: null,
+        boards: Array(9).fill({
+          squares: Array(9).fill(null),
+        }),
+      }],
       xIsNext:true,
       stepNumber: 0,
     }
+  }
+
+  runAI(){
+    const current_state = this.state.history[this.state.stepNumber]
+    if(this.props.o_ai && !this.state.xIsNext){
+      const move = this.props.o_ai(current_state)
+      this.handleClick(...move)
+    }
+    if(this.props.x_ai && this.state.xIsNext){
+      const move = this.props.x_ai(current_state)
+      this.handleClick(...move)
+    }
+  }
+
+  componentDidMount(){
+    this.runAI()
+  }
+
+  componentDidUpdate(){
+    this.runAI()
   }
 
   handleClick(board, square){
     if(this.state.board_restriction && this.state.board_restriction !== board) {return}
     const history = this.state.history.slice(0, this.state.stepNumber + 1);
     const current = history[this.state.stepNumber];
-    const current_board = current[board]
+    const boards = current.boards
+    const current_board = boards[board]
     const squares = current_board.squares.slice();
 
-    if (calculateGameWinner(current) || squares[square]) {
+    if (calculateGameWinner(boards) || squares[square]) {
       return;
     }
     squares[square] = this.state.xIsNext ? 'X' : 'O';
-    const next_state = current.map((other_board,index)=>index===board ? { squares: squares } : other_board)
-    // current[board] = { squares: squares }
+    const next_state = boards.map((other_board,index)=>index===board ? { squares: squares } : other_board)
     this.setState({
-      history: history.concat([ next_state ]),
-      board_restriction: square,
+      history: history.concat([ {
+        board_restriction: square,
+        boards:next_state,
+      }]),
       stepNumber: history.length,
       xIsNext: !this.state.xIsNext,
     })
@@ -85,15 +109,15 @@ class Game extends React.Component {
 
   jumpTo(step){
     this.setState({
-      board_restriction: null,
       stepNumber: step,
       xIsNext: (step % 2) === 0,
     });
   }
 
   renderBoard(state, board_num) {
-    const board = state.history[state.stepNumber][board_num];
-    const highlighted = state.board_restriction === board_num
+    const current = state.history[state.stepNumber]
+    const board = current.boards[board_num];
+    const highlighted = current.board_restriction === board_num
     return (
       <div className={highlighted ? "highlighted-game-board" : "game-board"}>
         <Board
@@ -107,8 +131,8 @@ class Game extends React.Component {
 
   render() {
     const history = this.state.history;
-    const current = history[this.state.stepNumber];
-    const winner = calculateGameWinner(current)
+    const boards = history[this.state.stepNumber].boards;
+    const winner = calculateGameWinner(boards)
 
     const moves = history.map((step, move)=> {
       const desc = move ?
@@ -160,9 +184,30 @@ class Game extends React.Component {
 // ========================================
 
 ReactDOM.render(
-  <Game />,
+  <Game o_ai={randomAI}/>,
   document.getElementById('root')
 );
+
+function randomMove(){
+  return Math.floor(Math.random()*9)
+}
+
+function randomAI(gameState){
+  const boardChoice = gameState.board_restriction || randomMove()
+  const boards = gameState.boards
+  const current_board = boards[boardChoice]
+  const squares = current_board.squares.slice();
+
+  let squareChoice = randomMove()
+  while(squares[squareChoice] !== null){
+    squareChoice = randomMove()
+  }
+
+  return [
+    boardChoice,
+    squareChoice,
+  ]
+}
 
 function calculateGameWinner(boards){
   var winner = null
