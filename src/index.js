@@ -54,23 +54,23 @@ class Game extends React.Component {
     super(props)
     this.state = {
       history: [{
+        xIsNext:true,
         board_restriction: null,
         boards: Array(9).fill({
           squares: Array(9).fill(null),
         }),
       }],
-      xIsNext:true,
       stepNumber: 0,
     }
   }
 
   runAI(){
     const current_state = this.state.history[this.state.stepNumber]
-    if(this.props.o_ai && !this.state.xIsNext){
+    if(this.props.o_ai && !current_state.xIsNext){
       const move = this.props.o_ai(current_state)
       this.handleClick(...move)
     }
-    if(this.props.x_ai && this.state.xIsNext){
+    if(this.props.x_ai && current_state.xIsNext){
       const move = this.props.x_ai(current_state)
       this.handleClick(...move)
     }
@@ -85,32 +85,21 @@ class Game extends React.Component {
   }
 
   handleClick(board, square){
-    if(this.state.board_restriction && this.state.board_restriction !== board) {return}
     const history = this.state.history.slice(0, this.state.stepNumber + 1);
     const current = history[this.state.stepNumber];
-    const boards = current.boards
-    const current_board = boards[board]
-    const squares = current_board.squares.slice();
+    const nextState = nextGameState(current, board, square)
 
-    if (calculateGameWinner(boards) || squares[square]) {
-      return;
-    }
-    squares[square] = this.state.xIsNext ? 'X' : 'O';
-    const next_state = boards.map((other_board,index)=>index===board ? { squares: squares } : other_board)
+    if (nextState.invalid) {return}
+
     this.setState({
-      history: history.concat([ {
-        board_restriction: square,
-        boards:next_state,
-      }]),
+      history: history.concat([nextState]),
       stepNumber: history.length,
-      xIsNext: !this.state.xIsNext,
     })
   }
 
   jumpTo(step){
     this.setState({
       stepNumber: step,
-      xIsNext: (step % 2) === 0,
     });
   }
 
@@ -191,6 +180,117 @@ ReactDOM.render(
 function randomMove(){
   return Math.floor(Math.random()*9)
 }
+
+//
+// SudoCode for alphaBeta -
+//
+// alphaBeta(origin, depth, −∞, +∞, TRUE)
+//
+//
+// function alphaBeta(node, depth, α, β, maximizingPlayer)
+//   if depth = 0 or node is a terminal node then
+//       return the heuristic value of node
+//   if maximizingPlayer then
+//       value := −∞
+//       for each child of node do
+//           value := max(value, alphabeta(child, depth − 1, α, β, FALSE))
+//           α := max(α, value)
+//           if α ≥ β then
+//               break (* β cut-off *)
+//       return value
+//   else
+//       value := +∞
+//       for each child of node do
+//           value := min(value, alphabeta(child, depth − 1, α, β, TRUE))
+//           β := min(β, value)
+//           if α ≥ β then
+//               break (* α cut-off *)
+//       return value
+
+function alphaBeta(node, depth, alpha, beta, maximizingPlayer){
+    if (depth === 0 || isTerminal(node)){
+      return heuristicValue(node)
+    }
+    if(maximizingPlayer){
+      let value = -100000
+      for( let move of validMoves(node) ){
+        const childNode = nextState(node, move)
+        value = Math.max(value, alphaBeta(childNode, depth - 1, alpha, beta, false))
+        alpha = Math.max(alpha, value)
+        if (alpha >= beta) {
+          break
+        }
+      }
+      return value
+    }
+    else{
+      let value = 100000
+      for( let move of validMoves(node)){
+        const childNode = nextState(node, move)
+        value = Math.min(value, alphaBeta(childNode, depth - 1, alpha, beta, true))
+        beta = Math.min(beta, value)
+        if (alpha >= beta) {
+          break
+        }
+      }
+      return value
+    }
+}
+
+function isTerminal(node){
+  return node.winner
+}
+
+
+function heuristicValue(node){
+  if(node.winner === 'X'){ return 10 }
+  else if (node.winner === 'O') { return -10 }
+  else { return 0 }
+}
+
+function invalidMove(current, board, square){
+  const squares = current.boards[board].squares.slice();
+  return (
+    (current.board_restriction && current.board_restriction !== board) ||
+    squares[square] ||
+    current.winner ||
+    square > 8 ||
+    square < 0
+  )
+}
+
+function nextState(current, square){
+  return nextGameState(current, current.board_restriction, square)
+}
+
+function nextGameState(current, board, square){
+  const boards = current.boards
+  const current_board = boards[board]
+  const squares = current_board.squares.slice();
+
+  if(invalidMove(current, board, square)) {return {invalid: true} }
+  squares[square] = current.xIsNext ? 'X' : 'O';
+
+  const nextBoardState = boards.map((other_board,index)=>index===board ? { squares: squares } : other_board)
+  return {
+    board_restriction: square,
+    boards: nextBoardState,
+    xIsNext: !current.xIsNext,
+    winner: calculateGameWinner(nextBoardState)
+  }
+}
+
+function validMoves(state){
+  const possibleMoves = Array(9).fill().map((x,i)=>i)
+  return possibleMoves.filter((i)=>!nextState(state, state.board_restriction, i).invalid)
+}
+
+
+// function alphaBetaAI(gameState){
+//   for( let move of validMoves(gameState) ){
+//     const childNode = nextState(gameState, move)
+//   }
+// }
 
 function randomAI(gameState){
   const boardChoice = gameState.board_restriction || randomMove()
