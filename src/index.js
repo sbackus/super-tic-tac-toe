@@ -91,9 +91,13 @@ class Game extends React.Component {
 
     if (nextState.invalid) {return}
 
-    this.setState({
-      history: history.concat([nextState]),
-      stepNumber: history.length,
+    this.setState((state)=>{
+      return (
+        {
+          history: state.history.concat([nextState]),
+          stepNumber: state.history.length,
+        }
+      )
     })
   }
 
@@ -173,7 +177,7 @@ class Game extends React.Component {
 // ========================================
 
 ReactDOM.render(
-  <Game o_ai={randomAI}/>,
+  <Game o_ai={alphaBetaAI}/>,
   document.getElementById('root')
 );
 
@@ -181,64 +185,38 @@ function randomMove(){
   return Math.floor(Math.random()*9)
 }
 
-//
-// SudoCode for alphaBeta -
-//
-// alphaBeta(origin, depth, −∞, +∞, TRUE)
-//
-//
-// function alphaBeta(node, depth, α, β, maximizingPlayer)
-//   if depth = 0 or node is a terminal node then
-//       return the heuristic value of node
-//   if maximizingPlayer then
-//       value := −∞
-//       for each child of node do
-//           value := max(value, alphabeta(child, depth − 1, α, β, FALSE))
-//           α := max(α, value)
-//           if α ≥ β then
-//               break (* β cut-off *)
-//       return value
-//   else
-//       value := +∞
-//       for each child of node do
-//           value := min(value, alphabeta(child, depth − 1, α, β, TRUE))
-//           β := min(β, value)
-//           if α ≥ β then
-//               break (* α cut-off *)
-//       return value
-
 function alphaBeta(node, depth, alpha, beta, maximizingPlayer){
-    if (depth === 0 || isTerminal(node)){
-      return heuristicValue(node)
-    }
-    if(maximizingPlayer){
-      let value = -100000
-      for( let move of validMoves(node) ){
-        const childNode = nextState(node, move)
-        value = Math.max(value, alphaBeta(childNode, depth - 1, alpha, beta, false))
-        alpha = Math.max(alpha, value)
-        if (alpha >= beta) {
-          break
-        }
+  if (depth === 0 || isTerminal(node)){
+    return heuristicValue(node)
+  }
+  if(maximizingPlayer){
+    let value = -100000
+    for( let move of validMoves(node) ){
+      const childNode = nextState(node, move)
+      value = Math.max(value, alphaBeta(childNode, depth - 1, alpha, beta, false))
+      alpha = Math.max(alpha, value)
+      if (alpha >= beta) {
+        break
       }
-      return value
     }
-    else{
-      let value = 100000
-      for( let move of validMoves(node)){
-        const childNode = nextState(node, move)
-        value = Math.min(value, alphaBeta(childNode, depth - 1, alpha, beta, true))
-        beta = Math.min(beta, value)
-        if (alpha >= beta) {
-          break
-        }
+    return value
+  }
+  else{
+    let value = 100000
+    for( let move of validMoves(node)){
+      const childNode = nextState(node, move)
+      value = Math.min(value, alphaBeta(childNode, depth - 1, alpha, beta, true))
+      beta = Math.min(beta, value)
+      if (alpha >= beta) {
+        break
       }
-      return value
     }
+    return value
+  }
 }
 
 function isTerminal(node){
-  return node.winner
+  return node.winner || validMoves(node).length === 0
 }
 
 
@@ -282,18 +260,31 @@ function nextGameState(current, board, square){
 
 function validMoves(state){
   const possibleMoves = Array(9).fill().map((x,i)=>i)
-  return possibleMoves.filter((i)=>!nextState(state, state.board_restriction, i).invalid)
+  return possibleMoves.filter((i)=>!nextState(state, i).invalid)
 }
 
+function alphaBetaAI(gameState){
+  const boardChoice = gameState.board_restriction === null ? randomMove() : gameState.board_restriction
+  const depth =  5
+  const movesWithValues = validMoves(gameState).map((move)=>[move,alphaBeta(nextState(gameState, move), depth, -100000, 100000, !gameState.xIsNext)])
+  const sortedMoves = movesWithValues.sort((move)=>move[1])
 
-// function alphaBetaAI(gameState){
-//   for( let move of validMoves(gameState) ){
-//     const childNode = nextState(gameState, move)
-//   }
-// }
+  //TODO: can this be done in a functional style instead of a loop?
+  let bestMove = [randomMove(), 99999999]
+  for(let move of movesWithValues){
+    if(move[1]<bestMove[1]){
+      bestMove = move
+    }
+  }
+
+  return [
+    boardChoice,
+    bestMove[0],
+  ]
+}
 
 function randomAI(gameState){
-  const boardChoice = gameState.board_restriction || randomMove()
+  const boardChoice = gameState.board_restriction === null ? randomMove() : gameState.board_restriction
   const boards = gameState.boards
   const current_board = boards[boardChoice]
   const squares = current_board.squares.slice();
