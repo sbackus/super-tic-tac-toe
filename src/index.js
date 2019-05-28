@@ -131,6 +131,8 @@ class Game extends React.Component {
       const desc = move ?
         'Go to move #' + move :
         'Go to game start';
+      if( this.props.x_ai && history[move].xIsNext ){return(<div> </div>)}
+      if( this.props.o_ai && !history[move].xIsNext ){return(<div> </div>)}
       return(
         <li key={move}>
           <button onClick={ () => this.jumpTo(move) }>{desc}</button>
@@ -238,7 +240,7 @@ function invalidMove(current, board, square){
 }
 
 function nextState(current, square){
-  return nextGameState(current, current.board_restriction, square)
+  return nextGameState(current, nextBoardChoice(current.board_restriction), square)
 }
 
 function nextGameState(current, board, square){
@@ -263,28 +265,40 @@ function validMoves(state){
   return possibleMoves.filter((i)=>!nextState(state, i).invalid)
 }
 
+function nextBoardChoice(board_restriction){
+  return (board_restriction === null ? randomMove() : board_restriction)
+}
+
 function alphaBetaAI(gameState){
-  const boardChoice = gameState.board_restriction === null ? randomMove() : gameState.board_restriction
+  const boardChoice = nextBoardChoice(gameState.board_restriction)
   const depth =  5
   const movesWithValues = validMoves(gameState).map((move)=>[move,alphaBeta(nextState(gameState, move), depth, -100000, 100000, !gameState.xIsNext)])
   const sortedMoves = movesWithValues.sort((move)=>move[1])
 
   //TODO: can this be done in a functional style instead of a loop?
-  let bestMove = [randomMove(), 99999999]
+  let bestOMove = [randomMove(), 99999999]
   for(let move of movesWithValues){
-    if(move[1]<bestMove[1]){
-      bestMove = move
+    if(move[1]<bestOMove[1]){
+      bestOMove = move
+    }
+  }
+
+  //TODO: can this be done in a functional style instead of a loop?
+  let bestXMove = [randomMove(), -99999999]
+  for(let move of movesWithValues){
+    if(move[1]>bestXMove[1]){
+      bestXMove = move
     }
   }
 
   return [
     boardChoice,
-    bestMove[0],
+    gameState.xIsNext ? bestXMove[0] : bestOMove[0],
   ]
 }
 
 function randomAI(gameState){
-  const boardChoice = gameState.board_restriction === null ? randomMove() : gameState.board_restriction
+  const boardChoice = nextBoardChoice(gameState.board_restriction)
   const boards = gameState.boards
   const current_board = boards[boardChoice]
   const squares = current_board.squares.slice();
